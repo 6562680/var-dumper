@@ -1,0 +1,36 @@
+{
+  "name": "gzhegow/var-dumper",
+  "description": "",
+  "authors": [
+    {
+      "name": "gzhegow",
+      "email": "6562680@gmail.com"
+    }
+  ],
+  
+  "type": "library",
+  "license": "MIT",
+  
+  "require": {
+    "php": ">=7.3",
+    
+    "symfony/var-dumper": "^5.2"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.5"
+  },
+  
+  "autoload": {
+    "psr-4": {
+      "Gzhegow\\VarDumper\\": "src/VarDumper"
+    },
+    "files": [
+      "src/var-dumper.php"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Gzhegow\\VarDumper\\Tests\\": "tests/src/VarDumper"
+    }
+  }
+}
