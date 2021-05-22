@@ -60,15 +60,13 @@ class AService
     }
 }
 
-$a = AService();
-
 // добавить новый кастер
 gcast([
     BService::class => 'is_null'
 ]);
 
 // воспользоваться выводом
-g($a);
+g($a = AService());
 
 // вернуться к предыдущей настройке кастеров
 $casters = gpop();
