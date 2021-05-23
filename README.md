@@ -60,15 +60,13 @@ class AService
     }
 }
 
-$a = new \Gzhegow\VarDumper\Tests\AService();
-
 // добавить новый кастер
 gcast([
-    \Gzhegow\VarDumper\Tests\BService::class => 'is_null'
+    BService::class => 'is_null'
 ]);
 
 // воспользоваться выводом
-g($a);
+g($a = AService());
 
 // вернуться к предыдущей настройке кастеров
 $casters = gpop();
