@@ -1,6 +1,6 @@
 <?php
 
-namespace Gzhegow\VarDumper\Tests;
+namespace Gzhegow\VarDumper\Tests\Services;
 
 
 /**

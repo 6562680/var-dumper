@@ -6,6 +6,8 @@ use Symfony\Component\VarDumper\Cloner\VarCloner;
 use Symfony\Component\VarDumper\Dumper\CliDumper;
 use Symfony\Component\VarDumper\Dumper\HtmlDumper;
 use Symfony\Component\VarDumper\Dumper\AbstractDumper;
+use Gzhegow\VarDumper\Exceptions\Runtime\ShutdownException;
+use Gzhegow\VarDumper\Exceptions\Logic\InvalidArgumentException;
 
 
 /**
@@ -21,6 +23,30 @@ class VarDumper
      * @var bool
      */
     protected $nonInteractive = false;
+
+    /**
+     * @var int[]
+     */
+    protected $indexes = [];
+    /**
+     * @var int[]
+     */
+    protected $limits = [];
+    /**
+     * @var int[]
+     */
+    protected $offsets = [];
+
+    /**
+     * @var bool[]
+     */
+    protected $groups;
+
+    /**
+     * @var callable[][]
+     */
+    protected $casters = [];
+
 
 
     /**
@@ -39,10 +65,10 @@ class VarDumper
      */
     public function newCloner() : VarCloner
     {
-        end(static::$casters);
+        end($this->casters);
 
-        $casters = ( null !== ( $key = key(static::$casters) ) )
-            ? static::$casters[ $key ]
+        $casters = ( null !== ( $key = key($this->casters) ) )
+            ? $this->casters[ $key ]
             : [];
 
         $cloner = new VarCloner();
@@ -131,49 +157,6 @@ class VarDumper
 
 
     /**
-     * @param array       $casters
-     * @param null|string $key
-     *
-     * @return static
-     */
-    public function push(array $casters, string $key = null)
-    {
-        $list = [];
-
-        foreach ( $casters as $type => $caster ) {
-            if (! is_callable($caster)) {
-                throw new \InvalidArgumentException('Each caster should be callable');
-            }
-
-            $list[ $type ] = static::funcBind($caster);
-        }
-
-        if (null === $key) {
-            static::$casters[] = $list;
-
-        } else {
-            end(static::$casters);
-
-            if ($key !== key(static::$casters)) {
-                unset(static::$casters[ $key ]);
-
-                static::$casters[ $key ] = $list;
-            }
-        }
-
-        return $this;
-    }
-
-    /**
-     * @return array
-     */
-    public function pop() : array
-    {
-        return array_pop(static::$casters) ?: [];
-    }
-
-
-    /**
      * @param mixed ...$arguments
      *
      * @return array
@@ -258,6 +241,7 @@ class VarDumper
         return $arguments;
     }
 
+
     /**
      * @param mixed ...$arguments
      *
@@ -283,22 +267,112 @@ class VarDumper
         return $arguments;
     }
 
+    /**
+     * @param mixed ...$arguments
+     *
+     * @return array|\Closure
+     */
+    public function ggdump(...$arguments)
+    {
+        return null === $this->groups
+            ? gdump(...$arguments)
+            : function (string $group = null) use ($arguments) {
+                $result = null;
+
+                if (( null !== $group )
+                    && isset($this->groups[ $group ])
+                ) {
+                    $result = gdump(...$arguments);
+                }
+
+                return $result;
+            };
+    }
+
+
+    /**
+     * @param int|float|string $group
+     *
+     * @return static
+     */
+    public function ggroup($group)
+    {
+        if (! is_scalar($group)) {
+            throw new InvalidArgumentException('Group should be scalar');
+        }
+
+        $this->groups[ $group ] = true;
+
+        return $this;
+    }
+
+    /**
+     * @return static
+     */
+    public function ggroupFlush()
+    {
+        $this->groups = null;
+
+        return $this;
+    }
+
+
+    /**
+     * @param array       $casters
+     * @param null|string $key
+     *
+     * @return static
+     */
+    public function gcast(array $casters, string $key = null)
+    {
+        $list = [];
+
+        foreach ( $casters as $type => $caster ) {
+            if (! is_callable($caster)) {
+                throw new \InvalidArgumentException('Each caster should be callable');
+            }
+
+            $list[ $type ] = $this->funcBind($caster);
+        }
+
+        if (null === $key) {
+            $this->casters[] = $list;
+
+        } else {
+            end($this->casters);
+
+            if ($key !== key($this->casters)) {
+                unset($this->casters[ $key ]);
+
+                $this->casters[ $key ] = $list;
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return array
+     */
+    public function gcastPop() : array
+    {
+        return array_pop($this->casters) ?: [];
+    }
+
 
     /**
      * @param string $key
-     * @param int    $n
+     * @param int    $idx
      * @param mixed  ...$arguments
      *
      * @return null|array
      */
-    public function ggn(string $key, int $n, ...$arguments) : ?array
+    public function ggn(string $key, int $idx, ...$arguments) : ?array
     {
-        static $_n;
+        $this->indexes[ $key ] = $this->indexes[ $key ] ?? $idx;
 
-        $_n[ $key ] = $_n[ $key ] ?? $n;
-
-        if (0 >= --$_n[ $key ]) {
-            $this->gdump(...$arguments);
+        if (0 >= --$this->indexes[ $key ]) {
+            $this->ggdump(...$arguments);
 
             throw new ShutdownException('Shutdown');
         }
@@ -308,63 +382,39 @@ class VarDumper
 
     /**
      * @param string    $key
-     * @param int|int[] $limit
+     * @param int|int[] $limits
      * @param mixed     ...$arguments
      *
      * @return null|array
      */
-    public function ggt(string $key, $limit, ...$arguments) : ?array
+    public function ggt(string $key, $limits, ...$arguments) : ?array
     {
-        static $_limit;
-        static $_offset;
+        $limits = is_array($limits)
+            ? $limits
+            : [ $limits ];
 
-        [ $limit, $offset ] = (array) $limit + [ 1, 0 ];
+        foreach ( $limits as $limit ) {
+            if (! is_int($limit)) {
+                throw new InvalidArgumentException('Each limit should be integer');
+            }
+        }
 
-        $_limit[ $key ] = $_limit[ $key ] ?? $limit;
-        $_offset[ $key ] = $_offset[ $key ] ?? $offset;
+        [ $limit, $offset ] = $limits + [ 1, 0 ];
 
-        if (0 < $_offset[ $key ]--) {
+        $this->limits[ $key ] = $this->limits[ $key ] ?? $limit;
+        $this->offsets[ $key ] = $this->offsets[ $key ] ?? $offset;
+
+        if (0 < $this->offsets[ $key ]--) {
             return null;
         }
 
-        if (0 < $_limit[ $key ]--) {
-            $this->gdump(...$arguments);
+        if (0 < $this->limits[ $key ]--) {
+            $this->ggdump(...$arguments);
 
             return $arguments;
         }
 
         throw new ShutdownException('Shutdown');
-    }
-
-
-    /**
-     * @return VarDumper|static
-     */
-    public static function getInstance()
-    {
-        return static::$instance = static::$instance
-            ?? new static();
-    }
-
-
-    /**
-     * @param int $limit
-     *
-     * @return string
-     */
-    public static function key(int $limit = 1) : string
-    {
-        $limit = max(1, $limit);
-
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $limit);
-
-        $step = end($trace);
-        $file = $step[ 'file' ] ?? '';
-        $line = $step[ 'line' ] ?? 0;
-
-        $result = implode(':', [ $file, $line ]);
-
-        return $result;
     }
 
 
@@ -378,7 +428,7 @@ class VarDumper
      *
      * @return \Closure
      */
-    public static function funcBind(callable $func, ...$arguments) : \Closure
+    protected function funcBind(callable $func, ...$arguments) : \Closure
     {
         // string
         if (is_string($func)) {
@@ -422,9 +472,34 @@ class VarDumper
 
 
     /**
-     * @var callable[][]
+     * @return VarDumper|static
      */
-    protected static $casters = [];
+    public static function getInstance()
+    {
+        return static::$instance = static::$instance
+            ?? new static();
+    }
+
+
+    /**
+     * @param int $limit
+     *
+     * @return string
+     */
+    public static function gkey(int $limit = 1) : string
+    {
+        $limit = max(1, $limit);
+
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $limit);
+
+        $step = end($trace);
+        $file = $step[ 'file' ] ?? '';
+        $line = $step[ 'line' ] ?? 0;
+
+        $result = implode(':', [ $file, $line ]);
+
+        return $result;
+    }
 
 
     /**

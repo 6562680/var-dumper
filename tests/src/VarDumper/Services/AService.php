@@ -1,8 +1,9 @@
 <?php
 
-namespace Gzhegow\VarDumper\Tests;
+namespace Gzhegow\VarDumper\Tests\Services;
 
 use PHPUnit\Framework\TestCase;
+use Gzhegow\VarDumper\Tests\Services\BService;
 
 
 /**

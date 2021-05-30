@@ -1,7 +1,7 @@
 <?php
 
 use Gzhegow\VarDumper\VarDumper;
-use Gzhegow\VarDumper\ShutdownException;
+use Gzhegow\VarDumper\Exceptions\Runtime\ShutdownException;
 
 
 if (! function_exists('gpause')) {
@@ -53,22 +53,6 @@ if (! function_exists('g')) {
     }
 }
 
-if (! function_exists('gb')) {
-    /**
-     * буферизует аргументы для вывода в лог, откуда отладка была вызвана, завершает программу
-     *
-     * @param mixed ...$arguments
-     *
-     * @return string
-     */
-    function gb(...$arguments) : string
-    {
-        $result = VarDumper::getInstance()->dumpGet(...$arguments);
-
-        return $result;
-    }
-}
-
 if (! function_exists('gg')) {
     /**
      * выводит аргументы для просмотра при отладке, откуда отладка была вызвана, завершает программу
@@ -85,6 +69,22 @@ if (! function_exists('gg')) {
     }
 }
 
+if (! function_exists('gb')) {
+    /**
+     * буферизует аргументы для вывода в лог, откуда отладка была вызвана, завершает программу
+     *
+     * @param mixed ...$arguments
+     *
+     * @return string
+     */
+    function gb(...$arguments) : string
+    {
+        $result = VarDumper::getInstance()->dumpGet(...$arguments);
+
+        return $result;
+    }
+}
+
 
 if (! function_exists('ggn')) {
     /**
@@ -98,7 +98,7 @@ if (! function_exists('ggn')) {
      */
     function ggn(int $n, ...$arguments) : array
     {
-        $key = VarDumper::key(2);
+        $key = VarDumper::gkey(2);
 
         try {
             $result = VarDumper::getInstance()->ggn($key, $n, ...$arguments);
@@ -124,7 +124,7 @@ if (! function_exists('ggt')) {
      */
     function ggt($limit, ...$arguments) : array
     {
-        $key = VarDumper::key(2);
+        $key = VarDumper::gkey(2);
 
         try {
             $result = VarDumper::getInstance()->ggt($key, $limit, ...$arguments);
@@ -138,37 +138,51 @@ if (! function_exists('ggt')) {
 }
 
 
-
-if (! function_exists('gcast')) {
+if (! function_exists('ggr')) {
     /**
-     * настраивает casters для последующего вызова gdump
+     * устанавливает новую группу
      *
-     * @param array $casters
+     * @param null|string $group
      *
      * @return VarDumper
      */
-    function gcast(array $casters)
+    function ggr(?string $group)
     {
         $dumper = VarDumper::getInstance();
 
-        $dumper->push($casters, VarDumper::key(2));
+        if (func_num_args() === 0) {
+            $dumper->ggroupFlush();
+
+            return $dumper;
+        }
+
+        $dumper->ggroup($group);
 
         return $dumper;
     }
 }
 
-if (! function_exists('gpop')) {
+
+if (! function_exists('gcast')) {
     /**
-     * Возвращает casters к предыдущему состоянию
+     * настраивает casters для последующего вызова gdump
      *
-     * @return array
+     * @param null|array $casters
+     *
+     * @return VarDumper
      */
-    function gpop() : array
+    function gcast(array $casters = null)
     {
         $dumper = VarDumper::getInstance();
 
-        $casters = $dumper->pop();
+        if (func_num_args() === 0) {
+            $dumper->gcastPop();
 
-        return $casters;
+            return $dumper;
+        }
+
+        $dumper->gcast($casters, VarDumper::gkey(2));
+
+        return $dumper;
     }
 }

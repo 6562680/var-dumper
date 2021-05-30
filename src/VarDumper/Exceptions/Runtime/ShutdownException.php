@@ -1,6 +1,6 @@
 <?php
 
-namespace Gzhegow\VarDumper;
+namespace Gzhegow\VarDumper\Exceptions\Runtime;
 
 
 /**
