@@ -146,7 +146,7 @@ if (! function_exists('ggr')) {
      *
      * @return VarDumper
      */
-    function ggr(?string $group)
+    function ggr(string $group = null)
     {
         $dumper = VarDumper::getInstance();
 
