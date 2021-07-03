@@ -172,9 +172,15 @@ if (! function_exists('gd')) {
      */
     function gd(...$arguments) : \Closure
     {
-        $result = VarDumper::getInstance()
+        $dumper = VarDumper::getInstance();
+
+        $result = $dumper
             ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
             ->dumpPauseGroup(...$arguments);
+
+        $result = ! $dumper->hasGroups()
+            ? function (string $group = null) { }
+            : $result;
 
         return $result;
     }
@@ -190,15 +196,21 @@ if (! function_exists('ggd')) {
      */
     function ggd(...$arguments) : \Closure
     {
-        $result = VarDumper::getInstance()
+        $dumper = VarDumper::getInstance();
+
+        $result = $dumper
             ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
             ->dumpPauseGroup(...$arguments);
 
-        return function (string $group = null) use ($result) {
-            $result($group);
+        $result = ! $dumper->hasGroups()
+            ? function (string $group = null) { }
+            : function (string $group = null) use ($result) {
+                $result($group);
 
-            die(1);
-        };
+                die(1);
+            };
+
+        return $result;
     }
 }
 
