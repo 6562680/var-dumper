@@ -4,6 +4,22 @@ use Gzhegow\VarDumper\VarDumper;
 use Gzhegow\VarDumper\Exceptions\Runtime\ShutdownException;
 
 
+if (! function_exists('gbuff')) {
+    /**
+     * буферизует аргументы для вывода в лог, откуда отладка была вызвана, завершает программу
+     *
+     * @param mixed ...$arguments
+     *
+     * @return string
+     */
+    function gbuff(...$arguments) : string
+    {
+        $result = VarDumper::getInstance()->dumpGet(...$arguments);
+
+        return $result;
+    }
+}
+
 if (! function_exists('gpause')) {
     /**
      * после каждого вывода ожидает нажатия клавиши от пользователя консоли
@@ -14,7 +30,9 @@ if (! function_exists('gpause')) {
      */
     function gpause(...$arguments) : array
     {
-        $result = VarDumper::getInstance()->gpause(...$arguments);
+        $result = VarDumper::getInstance()
+            ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
+            ->pause(...$arguments);
 
         return $result;
     }
@@ -30,7 +48,9 @@ if (! function_exists('gdump')) {
      */
     function gdump(...$arguments) : array
     {
-        $result = VarDumper::getInstance()->gdump(...$arguments);
+        $result = VarDumper::getInstance()
+            ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
+            ->dumpPause(...$arguments);
 
         return $result;
     }
@@ -47,7 +67,9 @@ if (! function_exists('g')) {
      */
     function g(...$arguments) : array
     {
-        VarDumper::getInstance()->dump(...$arguments);
+        VarDumper::getInstance()
+            ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
+            ->dumpPauseGroup(...$arguments);
 
         return $arguments;
     }
@@ -63,25 +85,11 @@ if (! function_exists('gg')) {
      */
     function gg(...$arguments) : array
     {
-        VarDumper::getInstance()->dump(...$arguments);
+        VarDumper::getInstance()
+            ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
+            ->dumpPauseGroup(...$arguments);
 
         die(1);
-    }
-}
-
-if (! function_exists('gb')) {
-    /**
-     * буферизует аргументы для вывода в лог, откуда отладка была вызвана, завершает программу
-     *
-     * @param mixed ...$arguments
-     *
-     * @return string
-     */
-    function gb(...$arguments) : string
-    {
-        $result = VarDumper::getInstance()->dumpGet(...$arguments);
-
-        return $result;
     }
 }
 
@@ -101,7 +109,9 @@ if (! function_exists('ggn')) {
         $key = VarDumper::gkey(2);
 
         try {
-            $result = VarDumper::getInstance()->ggn($key, $n, ...$arguments);
+            $result = VarDumper::getInstance()
+                ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
+                ->ggn($key, $n, ...$arguments);
         }
         catch ( ShutdownException $e ) {
             die(1);
@@ -122,12 +132,14 @@ if (! function_exists('ggt')) {
      *
      * @return array
      */
-    function ggt($limit, ...$arguments) : array
+    function ggt($limit, ...$arguments) : ?array
     {
         $key = VarDumper::gkey(2);
 
         try {
-            $result = VarDumper::getInstance()->ggt($key, $limit, ...$arguments);
+            $result = VarDumper::getInstance()
+                ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
+                ->ggt($key, $limit, ...$arguments);
         }
         catch ( ShutdownException $e ) {
             die(1);

@@ -16,7 +16,7 @@ g(...$arguments);
 gg(...$arguments);
 
 // вывести в переменную
-$buffer = gb(...$arguments);
+$buffer = gbuff(...$arguments);
 ```
 
 ### Ручное управление

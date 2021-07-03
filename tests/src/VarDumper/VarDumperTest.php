@@ -26,7 +26,7 @@ class VarDumperTest extends TestCase
     }
 
 
-    public function testGb()
+    public function testDumpGet()
     {
         $vd = $this->getVarDumper();
 
@@ -36,12 +36,15 @@ class VarDumperTest extends TestCase
         $this->assertEquals("array:1 [\n  0 => \"hello\"\n]\n\"hello\"", $vd->dumpGet([ 'hello' ], 'hello'));
     }
 
+
     public function testGgn()
     {
-        $vd = $this->getVarDumper();
+        $dumper = $this->getVarDumper();
+
+        $this->expectException(ShutdownException::class);
 
         for ( $i = 0; $i < 2; $i++ ) {
-            $result = $vd->ggn('test', 3, 'hello');
+            $result = $dumper->ggn('test', 3, 'hello');
 
             if ($i === 0) {
                 $this->assertEquals([ 'hello' ], $result);
@@ -50,15 +53,15 @@ class VarDumperTest extends TestCase
 
         $this->expectException(ShutdownException::class);
 
-        $vd->ggn('test', 3, 'hello');
+        $dumper->ggn('test', 3, 'hello');
     }
 
     public function testGgt()
     {
-        $vd = $this->getVarDumper();
+        $dumper = $this->getVarDumper();
 
         for ( $i = 0; $i < 4; $i++ ) {
-            $result = $vd->ggt('test', [ 2, 2 ], 'hello');
+            $result = $dumper->ggt('test', [ 2, 2 ], 'hello');
 
             if ($i === 0) {
                 $this->assertEquals(null, $result);
@@ -76,8 +79,9 @@ class VarDumperTest extends TestCase
 
         $this->expectException(ShutdownException::class);
 
-        $vd->ggt('test', [ 2, 2 ], 'hello');
+        $dumper->ggt('test', [ 2, 2 ], 'hello');
     }
+
 
     public function testGgr()
     {
@@ -85,8 +89,8 @@ class VarDumperTest extends TestCase
 
         $func = function () use ($vd) {
             return [
-                $vd->gdump('hello'),
-                $vd->ggdump('world'),
+                $vd->dumpPause('hello'),
+                $vd->dumpPauseGroup('world'),
             ];
         };
 
@@ -95,7 +99,7 @@ class VarDumperTest extends TestCase
             [ 'world' ],
         ], $func());
 
-        $vd->ggroup(1);
+        ggr(1);
 
         [ $arguments, $curry ] = $func();
 
@@ -105,13 +109,14 @@ class VarDumperTest extends TestCase
         $this->assertEquals(null, $curry());
         $this->assertEquals([ 'world' ], $curry(1));
 
-        $vd->ggroupFlush();
+        ggr();
 
         $this->assertEquals([
             [ 'hello' ],
             [ 'world' ],
         ], $func());
     }
+
 
     public function testGcast()
     {

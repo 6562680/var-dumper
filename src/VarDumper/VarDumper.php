@@ -25,6 +25,11 @@ class VarDumper
     protected $nonInteractive = false;
 
     /**
+     * @var array
+     */
+    protected $trace;
+
+    /**
      * @var int[]
      */
     protected $indexes = [];
@@ -48,7 +53,6 @@ class VarDumper
     protected $casters = [];
 
 
-
     /**
      * Constructor
      */
@@ -56,8 +60,32 @@ class VarDumper
     {
         $this->noColor = $_SERVER[ 'NO_COLOR' ] ?? false;
         $this->nonInteractive = false;
+
+        $this->withTrace([]);
     }
 
+
+    /**
+     * @param array $trace
+     *
+     * @return static
+     */
+    public function withTrace(array $trace = [])
+    {
+        $trace += [
+            'function' => '<function>',
+            'line'     => '<line>',
+            'file'     => '<file>',
+            'class'    => '<class>',
+            'object'   => null,
+            'type'     => null,
+            'args'     => [],
+        ];
+
+        $this->trace = $trace;
+
+        return $this;
+    }
 
 
     /**
@@ -168,8 +196,13 @@ class VarDumper
 
         foreach ( $arguments as $argument ) {
             try {
-                $var = $cloner->cloneVar($argument);
+                $var = $cloner->cloneVar(implode(' :: ', [
+                    $this->trace[ 'file' ],
+                    $this->trace[ 'line' ],
+                ]));
+                $dumper->dump($var);
 
+                $var = $cloner->cloneVar($argument);
                 $dumper->dump($var);
             }
             catch ( \ErrorException $e ) {
@@ -223,7 +256,7 @@ class VarDumper
      *
      * @return array
      */
-    public function gpause(...$arguments) : array
+    public function pause(...$arguments) : array
     {
         if (PHP_SAPI !== 'cli') {
             throw new \RuntimeException('Should be called in CLI mode');
@@ -247,13 +280,13 @@ class VarDumper
      *
      * @return array
      */
-    public function gdump(...$arguments) : array
+    public function dumpPause(...$arguments) : array
     {
         switch ( true ):
             case ( PHP_SAPI === 'cli'
                 && ! $this->nonInteractive
             ):
-                $this->gpause(...$arguments);
+                $this->pause(...$arguments);
                 break;
 
             default:
@@ -272,17 +305,17 @@ class VarDumper
      *
      * @return array|\Closure
      */
-    public function ggdump(...$arguments)
+    public function dumpPauseGroup(...$arguments)
     {
         return null === $this->groups
-            ? gdump(...$arguments)
+            ? $this->dumpPause(...$arguments)
             : function (string $group = null) use ($arguments) {
                 $result = null;
 
                 if (( null !== $group )
                     && isset($this->groups[ $group ])
                 ) {
-                    $result = gdump(...$arguments);
+                    $result = $this->dumpPause(...$arguments);
                 }
 
                 return $result;
@@ -367,12 +400,12 @@ class VarDumper
      *
      * @return null|array
      */
-    public function ggn(string $key, int $idx, ...$arguments) : ?array
+    public function ggn(string $key, int $idx, ...$arguments) : array
     {
         $this->indexes[ $key ] = $this->indexes[ $key ] ?? $idx;
 
         if (0 >= --$this->indexes[ $key ]) {
-            $this->ggdump(...$arguments);
+            $this->dumpPauseGroup(...$arguments);
 
             throw new ShutdownException('Shutdown');
         }
@@ -409,7 +442,7 @@ class VarDumper
         }
 
         if (0 < $this->limits[ $key ]--) {
-            $this->ggdump(...$arguments);
+            $this->dumpPauseGroup(...$arguments);
 
             return $arguments;
         }
@@ -496,7 +529,7 @@ class VarDumper
         $file = $step[ 'file' ] ?? '';
         $line = $step[ 'line' ] ?? 0;
 
-        $result = implode(':', [ $file, $line ]);
+        $result = implode(' :: ', [ $file, $line ]);
 
         return $result;
     }
