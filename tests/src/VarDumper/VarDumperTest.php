@@ -83,41 +83,6 @@ class VarDumperTest extends TestCase
     }
 
 
-    public function testGgr()
-    {
-        $vd = $this->getVarDumper();
-
-        $func = function () use ($vd) {
-            return [
-                $vd->dumpPause('hello'),
-                $vd->dumpPauseGroup('world'),
-            ];
-        };
-
-        $this->assertEquals([
-            [ 'hello' ],
-            [ 'world' ],
-        ], $func());
-
-        ggr(1);
-
-        [ $arguments, $curry ] = $func();
-
-        $this->assertEquals([ 'hello' ], $arguments);
-        $this->assertInstanceOf(\Closure::class, $curry);
-
-        $this->assertEquals(null, $curry());
-        $this->assertEquals([ 'world' ], $curry(1));
-
-        ggr();
-
-        $this->assertEquals([
-            [ 'hello' ],
-            [ 'world' ],
-        ], $func());
-    }
-
-
     public function testGcast()
     {
         $vd = $this->getVarDumper();

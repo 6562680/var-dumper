@@ -254,9 +254,9 @@ class VarDumper
     /**
      * @param mixed ...$arguments
      *
-     * @return array
+     * @return void
      */
-    public function pause(...$arguments) : array
+    public function pause(...$arguments) : void
     {
         if (PHP_SAPI !== 'cli') {
             throw new \RuntimeException('Should be called in CLI mode');
@@ -270,17 +270,15 @@ class VarDumper
         $h = fopen('php://stdin', 'r');
         fgets($h);
         fclose($h);
-
-        return $arguments;
     }
 
 
     /**
      * @param mixed ...$arguments
      *
-     * @return array
+     * @return void
      */
-    public function dumpPause(...$arguments) : array
+    public function dumpPause(...$arguments) : void
     {
         switch ( true ):
             case ( PHP_SAPI === 'cli'
@@ -296,30 +294,28 @@ class VarDumper
                 break;
 
         endswitch;
-
-        return $arguments;
     }
 
     /**
      * @param mixed ...$arguments
      *
-     * @return array|\Closure
+     * @return null|\Closure
      */
-    public function dumpPauseGroup(...$arguments)
+    public function dumpPauseGroup(...$arguments) : ?\Closure
     {
-        return null === $this->groups
-            ? $this->dumpPause(...$arguments)
-            : function (string $group = null) use ($arguments) {
-                $result = null;
-
+        if (null !== $this->groups) {
+            return function (string $group = null) use ($arguments) {
                 if (( null !== $group )
                     && isset($this->groups[ $group ])
                 ) {
-                    $result = $this->dumpPause(...$arguments);
+                    $this->dumpPause(...$arguments);
                 }
-
-                return $result;
             };
+        }
+
+        $this->dumpPause(...$arguments);
+
+        return null;
     }
 
 

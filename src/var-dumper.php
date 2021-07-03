@@ -26,15 +26,13 @@ if (! function_exists('gpause')) {
      *
      * @param mixed ...$arguments
      *
-     * @return array
+     * @return void
      */
-    function gpause(...$arguments) : array
+    function gpause(...$arguments) : void
     {
-        $result = VarDumper::getInstance()
+        VarDumper::getInstance()
             ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
             ->pause(...$arguments);
-
-        return $result;
     }
 }
 
@@ -44,15 +42,13 @@ if (! function_exists('gdump')) {
      *
      * @param mixed ...$arguments
      *
-     * @return array
+     * @return void
      */
-    function gdump(...$arguments) : array
+    function gdump(...$arguments) : void
     {
-        $result = VarDumper::getInstance()
+        VarDumper::getInstance()
             ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
             ->dumpPause(...$arguments);
-
-        return $result;
     }
 }
 
@@ -63,15 +59,15 @@ if (! function_exists('g')) {
      *
      * @param mixed ...$arguments
      *
-     * @return array
+     * @return null|Closure
      */
-    function g(...$arguments) : array
+    function g(...$arguments) : ?\Closure
     {
-        VarDumper::getInstance()
+        $result = VarDumper::getInstance()
             ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
             ->dumpPauseGroup(...$arguments);
 
-        return $arguments;
+        return $result;
     }
 }
 
@@ -81,15 +77,19 @@ if (! function_exists('gg')) {
      *
      * @param mixed ...$arguments
      *
-     * @return array
+     * @return null|Closure
      */
-    function gg(...$arguments) : array
+    function gg(...$arguments) : ?\Closure
     {
-        VarDumper::getInstance()
+        $result = VarDumper::getInstance()
             ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
             ->dumpPauseGroup(...$arguments);
 
-        die(1);
+        if (null === $result) {
+            die(1);
+        }
+
+        return $result;
     }
 }
 
