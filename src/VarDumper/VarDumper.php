@@ -140,6 +140,24 @@ class VarDumper
 
 
     /**
+     * @return bool[]
+     */
+    public function getGroups() : array
+    {
+        return $this->groups;
+    }
+
+
+    /**
+     * @return bool
+     */
+    public function hasGroups() : bool
+    {
+        return isset($this->groups);
+    }
+
+
+    /**
      * @return bool|mixed
      */
     public function isNoColor() : bool
@@ -299,23 +317,15 @@ class VarDumper
     /**
      * @param mixed ...$arguments
      *
-     * @return null|\Closure
+     * @return \Closure
      */
-    public function dumpPauseGroup(...$arguments) : ?\Closure
+    public function dumpPauseGroup(...$arguments) : \Closure
     {
-        if (null !== $this->groups) {
-            return function (string $group = null) use ($arguments) {
-                if (( null !== $group )
-                    && isset($this->groups[ $group ])
-                ) {
-                    $this->dumpPause(...$arguments);
-                }
-            };
-        }
-
-        $this->dumpPause(...$arguments);
-
-        return null;
+        return function (string $group = null) use ($arguments) {
+            if (( null !== $group ) && isset($this->groups[ $group ])) {
+                $this->dumpPause(...$arguments);
+            }
+        };
     }
 
 

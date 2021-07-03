@@ -58,16 +58,12 @@ if (! function_exists('g')) {
      * выводит аргументы для просмотра при отладке
      *
      * @param mixed ...$arguments
-     *
-     * @return null|Closure
      */
-    function g(...$arguments) : ?\Closure
+    function g(...$arguments) : void
     {
-        $result = VarDumper::getInstance()
+        VarDumper::getInstance()
             ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
-            ->dumpPauseGroup(...$arguments);
-
-        return $result;
+            ->dumpPause(...$arguments);
     }
 }
 
@@ -81,19 +77,11 @@ if (! function_exists('gg')) {
      */
     function gg(...$arguments) : ?\Closure
     {
-        $result = VarDumper::getInstance()
+        VarDumper::getInstance()
             ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
-            ->dumpPauseGroup(...$arguments);
+            ->dumpPause(...$arguments);
 
-        if (null === $result) {
-            die(1);
-        }
-
-        return function (string $group = null) use ($result) {
-            $result($group);
-
-            die(1);
-        };
+        die(1);
     }
 }
 
@@ -171,6 +159,46 @@ if (! function_exists('ggr')) {
         $dumper->ggroup($group);
 
         return $dumper;
+    }
+}
+
+if (! function_exists('gd')) {
+    /**
+     * выводит аргументы для просмотра при отладке, откуда отладка была вызвана, завершает программу
+     *
+     * @param mixed ...$arguments
+     *
+     * @return Closure
+     */
+    function gd(...$arguments) : \Closure
+    {
+        $result = VarDumper::getInstance()
+            ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
+            ->dumpPauseGroup(...$arguments);
+
+        return $result;
+    }
+}
+
+if (! function_exists('ggd')) {
+    /**
+     * выводит аргументы для просмотра при отладке, откуда отладка была вызвана, завершает программу
+     *
+     * @param mixed ...$arguments
+     *
+     * @return Closure
+     */
+    function ggd(...$arguments) : \Closure
+    {
+        $result = VarDumper::getInstance()
+            ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
+            ->dumpPauseGroup(...$arguments);
+
+        return function (string $group = null) use ($result) {
+            $result($group);
+
+            die(1);
+        };
     }
 }
 
