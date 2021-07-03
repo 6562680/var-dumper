@@ -89,7 +89,11 @@ if (! function_exists('gg')) {
             die(1);
         }
 
-        return $result;
+        return function () use ($result) {
+            $result();
+
+            die(1);
+        };
     }
 }
 

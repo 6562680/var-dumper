@@ -44,11 +44,7 @@ class VarDumperTest extends TestCase
         $this->expectException(ShutdownException::class);
 
         for ( $i = 0; $i < 2; $i++ ) {
-            $result = $dumper->ggn('test', 3, 'hello');
-
-            if ($i === 0) {
-                $this->assertEquals([ 'hello' ], $result);
-            }
+            $dumper->ggn('test', 3, 'hello');
         }
 
         $this->expectException(ShutdownException::class);
@@ -61,20 +57,7 @@ class VarDumperTest extends TestCase
         $dumper = $this->getVarDumper();
 
         for ( $i = 0; $i < 4; $i++ ) {
-            $result = $dumper->ggt('test', [ 2, 2 ], 'hello');
-
-            if ($i === 0) {
-                $this->assertEquals(null, $result);
-            }
-            if ($i === 1) {
-                $this->assertEquals(null, $result);
-            }
-            if ($i === 2) {
-                $this->assertEquals([ 'hello' ], $result);
-            }
-            if ($i === 3) {
-                $this->assertEquals([ 'hello' ], $result);
-            }
+            $dumper->ggt('test', [ 2, 2 ], 'hello');
         }
 
         $this->expectException(ShutdownException::class);

@@ -394,19 +394,17 @@ class VarDumper
      * @param int    $idx
      * @param mixed  ...$arguments
      *
-     * @return null|array
+     * @return void
      */
-    public function ggn(string $key, int $idx, ...$arguments) : array
+    public function ggn(string $key, int $idx, ...$arguments) : void
     {
         $this->indexes[ $key ] = $this->indexes[ $key ] ?? $idx;
 
         if (0 >= --$this->indexes[ $key ]) {
-            $this->dumpPauseGroup(...$arguments);
+            $this->dumpPause(...$arguments);
 
             throw new ShutdownException('Shutdown');
         }
-
-        return $arguments;
     }
 
     /**
@@ -414,9 +412,9 @@ class VarDumper
      * @param int|int[] $limits
      * @param mixed     ...$arguments
      *
-     * @return null|array
+     * @return void
      */
-    public function ggt(string $key, $limits, ...$arguments) : ?array
+    public function ggt(string $key, $limits, ...$arguments) : void
     {
         $limits = is_array($limits)
             ? $limits
@@ -434,13 +432,13 @@ class VarDumper
         $this->offsets[ $key ] = $this->offsets[ $key ] ?? $offset;
 
         if (0 < $this->offsets[ $key ]--) {
-            return null;
+            return;
         }
 
         if (0 < $this->limits[ $key ]--) {
-            $this->dumpPauseGroup(...$arguments);
+            $this->dumpPause(...$arguments);
 
-            return $arguments;
+            return;
         }
 
         throw new ShutdownException('Shutdown');
