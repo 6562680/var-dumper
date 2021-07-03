@@ -89,8 +89,8 @@ if (! function_exists('gg')) {
             die(1);
         }
 
-        return function () use ($result) {
-            $result();
+        return function (string $group = null) use ($result) {
+            $result($group);
 
             die(1);
         };
@@ -106,22 +106,20 @@ if (! function_exists('ggn')) {
      * @param int   $n
      * @param mixed ...$arguments
      *
-     * @return array
+     * @return void
      */
-    function ggn(int $n, ...$arguments) : array
+    function ggn(int $n, ...$arguments) : void
     {
         $key = VarDumper::gkey(2);
 
         try {
-            $result = VarDumper::getInstance()
+            VarDumper::getInstance()
                 ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
                 ->ggn($key, $n, ...$arguments);
         }
         catch ( ShutdownException $e ) {
             die(1);
         }
-
-        return $result;
     }
 }
 
@@ -134,22 +132,20 @@ if (! function_exists('ggt')) {
      * @param int|int[] $limit
      * @param mixed     ...$arguments
      *
-     * @return array
+     * @return void
      */
-    function ggt($limit, ...$arguments) : ?array
+    function ggt($limit, ...$arguments) : void
     {
         $key = VarDumper::gkey(2);
 
         try {
-            $result = VarDumper::getInstance()
+            VarDumper::getInstance()
                 ->withTrace(debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[ 0 ])
                 ->ggt($key, $limit, ...$arguments);
         }
         catch ( ShutdownException $e ) {
             die(1);
         }
-
-        return $result;
     }
 }
 
