@@ -8,6 +8,7 @@ use Symfony\Component\VarDumper\Dumper\HtmlDumper;
 use Symfony\Component\VarDumper\Dumper\AbstractDumper;
 use Gzhegow\VarDumper\Exceptions\Runtime\ShutdownException;
 use Gzhegow\VarDumper\Exceptions\Logic\InvalidArgumentException;
+use Gzhegow\VarDumper\Exceptions\Runtime\UnexpectedValueException;
 
 
 /**
@@ -371,7 +372,15 @@ class VarDumper
                 throw new \InvalidArgumentException('Each caster should be callable');
             }
 
-            $list[ $type ] = $this->funcBind($caster);
+            $list[ $type ] = function () use ($caster) {
+                if (! is_bool($bool = $this->funcBind($caster)())) {
+                    throw new UnexpectedValueException(
+                        [ 'Caster should return boolean: %s', $bool ]
+                    );
+                }
+
+                return $bool;
+            };
         }
 
         if (null === $key) {
