@@ -33,25 +33,21 @@ class VarDumper
     /**
      * @var int[]
      */
-    protected $indexes = [];
+    protected $calls = [];
     /**
-     * @var int[]
+     * @var int[][]
      */
-    protected $limits = [];
-    /**
-     * @var int[]
-     */
-    protected $offsets = [];
-
-    /**
-     * @var bool[]
-     */
-    protected $groups;
+    protected $ranges = [];
 
     /**
      * @var callable[][]
      */
     protected $casters = [];
+
+    /**
+     * @var bool[]
+     */
+    protected $groups;
 
 
     /**
@@ -63,6 +59,22 @@ class VarDumper
         $this->nonInteractive = false;
 
         $this->withTrace([]);
+    }
+
+
+    /**
+     * @return static
+     */
+    public function reset()
+    {
+        $this->calls = [];
+        $this->ranges = [];
+
+        $this->casters = [];
+
+        $this->groups = null;
+
+        return $this;
     }
 
 
@@ -166,6 +178,7 @@ class VarDumper
         return $this->noColor;
     }
 
+
     /**
      * @return bool|mixed
      */
@@ -189,6 +202,7 @@ class VarDumper
 
         return $this;
     }
+
 
     /**
      * @param bool|mixed $nonInteractive
@@ -237,9 +251,10 @@ class VarDumper
      *
      * @return string
      */
-    public function dumpGet(...$arguments) : string
+    public function buff(...$arguments) : string
     {
         $noColor = $this->noColor;
+
         $this->noColor(true);
 
         $cloner = $this->newCloner();
@@ -275,35 +290,17 @@ class VarDumper
      *
      * @return void
      */
-    public function pause(...$arguments) : void
-    {
-        if (PHP_SAPI !== 'cli') {
-            throw new \RuntimeException('Should be called in CLI mode');
-        }
-
-        if ($arguments) {
-            VarDumper::getInstance()->dump(...$arguments);
-        }
-
-        echo '> Press ENTER to continue...' . PHP_EOL;
-        $h = fopen('php://stdin', 'r');
-        fgets($h);
-        fclose($h);
-    }
-
-
-    /**
-     * @param mixed ...$arguments
-     *
-     * @return void
-     */
-    public function dumpPause(...$arguments) : void
+    public function pauseDump(...$arguments) : void
     {
         switch ( true ):
             case ( PHP_SAPI === 'cli'
                 && ! $this->nonInteractive
             ):
-                $this->pause(...$arguments);
+                if ($arguments) {
+                    VarDumper::getInstance()->dump(...$arguments);
+                }
+
+                $this->cliPause();
                 break;
 
             default:
@@ -318,40 +315,66 @@ class VarDumper
     /**
      * @param mixed ...$arguments
      *
-     * @return \Closure
+     * @return void
      */
-    public function dumpPauseGroup(...$arguments) : \Closure
+    public function pauseDumpExit(...$arguments) : void
     {
-        return function (string $group = null) use ($arguments) {
-            if (( null !== $group ) && isset($this->groups[ $group ])) {
-                $this->dumpPause(...$arguments);
+        $this->pauseDump(...$arguments);
+
+        throw new ShutdownException('Shutdown');
+    }
+
+    /**
+     * @param string    $key
+     * @param int|int[] $range
+     * @param mixed     ...$arguments
+     *
+     * @return void
+     */
+    public function pauseDumpRange(string $key, $range, ...$arguments) : void
+    {
+        $range = is_array($range)
+            ? $range
+            : [ $range ];
+
+        foreach ( $range as $r ) {
+            if (! is_int($r)) {
+                throw new InvalidArgumentException('Each range step should be integer');
             }
-        };
+        }
+
+        if (! isset($this->calls[ $key ])) {
+            $this->calls[ $key ] = 0;
+            $this->ranges[ $key ] = [ min($range), max($range) ];
+        }
+
+        $call = ++$this->calls[ $key ];
+
+        [ $min, $max ] = $this->ranges[ $key ];
+
+        if ($call < $min) {
+            return;
+
+        } elseif ($call <= $max) {
+            $this->pauseDump(...$arguments);
+
+            return;
+        }
+
+        throw new ShutdownException('Shutdown');
     }
 
 
     /**
-     * @param int|float|string $group
+     * @param null|string $group
      *
      * @return static
      */
-    public function ggroup($group)
+    public function ggroup(string $group = null)
     {
-        if (! is_scalar($group)) {
-            throw new InvalidArgumentException('Group should be scalar');
-        }
-
-        $this->groups[ $group ] = true;
-
-        return $this;
-    }
-
-    /**
-     * @return static
-     */
-    public function ggroupFlush()
-    {
-        $this->groups = null;
+        isset($group)
+            ? ( $this->groups[ $group ] = true )
+            : ( $this->groups = null );
 
         return $this;
     }
@@ -409,66 +432,45 @@ class VarDumper
 
 
     /**
-     * @param string $key
-     * @param int    $idx
-     * @param mixed  ...$arguments
-     *
      * @return void
      */
-    public function ggn(string $key, int $idx, ...$arguments) : void
+    public function cliPause() : void
     {
-        $this->indexes[ $key ] = $this->indexes[ $key ] ?? $idx;
-
-        if (0 >= --$this->indexes[ $key ]) {
-            $this->dumpPause(...$arguments);
-
-            throw new ShutdownException('Shutdown');
+        if (PHP_SAPI !== 'cli') {
+            throw new \RuntimeException('Should be called in CLI mode');
         }
+
+        echo '> Press ENTER to continue...' . PHP_EOL;
+        $h = fopen('php://stdin', 'r');
+        fgets($h);
+        fclose($h);
     }
 
     /**
-     * @param string    $key
-     * @param int|int[] $limits
-     * @param mixed     ...$arguments
+     * @param callable $func
      *
-     * @return void
+     * @return \Closure
      */
-    public function ggt(string $key, $limits, ...$arguments) : void
+    public function funcDecorateGroup(callable $func) : \Closure
     {
-        $limits = is_array($limits)
-            ? $limits
-            : [ $limits ];
-
-        foreach ( $limits as $limit ) {
-            if (! is_int($limit)) {
-                throw new InvalidArgumentException('Each limit should be integer');
+        return function (string $group = null, ...$arguments) use ($func) {
+            if (! $this->hasGroups()) {
+                return;
             }
-        }
 
-        [ $limit, $offset ] = $limits + [ 1, 0 ];
+            if (null === $group) {
+                return;
+            }
 
-        $this->limits[ $key ] = $this->limits[ $key ] ?? $limit;
-        $this->offsets[ $key ] = $this->offsets[ $key ] ?? $offset;
+            if (! isset($this->groups[ $group ])) {
+                return;
+            }
 
-        if (0 < $this->offsets[ $key ]--) {
-            return;
-        }
-
-        if (0 < $this->limits[ $key ]--) {
-            $this->dumpPause(...$arguments);
-
-            return;
-        }
-
-        throw new ShutdownException('Shutdown');
+            $func(...$arguments);
+        };
     }
 
-
     /**
-     * bind
-     * копирует тело функции и присваивает аргументы на их места в переданном порядке
-     * bind('is_array', [], 1, 2) -> Closure of (function is_array($var = []))
-     *
      * @param callable $func
      * @param mixed    ...$arguments
      *
@@ -516,7 +518,6 @@ class VarDumper
         return $result;
     }
 
-
     /**
      * @return VarDumper|static
      */
@@ -528,15 +529,15 @@ class VarDumper
 
 
     /**
-     * @param int $limit
+     * @param int $backtraceLimit
      *
      * @return string
      */
-    public static function gkey(int $limit = 1) : string
+    public static function dumperKey(int $backtraceLimit = 1) : string
     {
-        $limit = max(1, $limit);
+        $backtraceLimit = max(1, $backtraceLimit);
 
-        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $limit);
+        $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, $backtraceLimit);
 
         $step = end($trace);
         $file = $step[ 'file' ] ?? '';
