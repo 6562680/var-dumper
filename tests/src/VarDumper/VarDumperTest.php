@@ -93,7 +93,7 @@ DOC;
         $this->assertEquals($expected, $vd->dumpGet($a));
 
         gcast($casters = [
-            BService::class => 'is_object',
+            BService::class => 'is_null',
         ]);
 
         $this->assertEquals($expectedCasters, $vd->dumpGet($a));

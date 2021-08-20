@@ -2,13 +2,13 @@
 
 namespace Gzhegow\VarDumper;
 
+use Symfony\Component\VarDumper\Cloner\Stub;
 use Symfony\Component\VarDumper\Cloner\VarCloner;
 use Symfony\Component\VarDumper\Dumper\CliDumper;
 use Symfony\Component\VarDumper\Dumper\HtmlDumper;
 use Symfony\Component\VarDumper\Dumper\AbstractDumper;
 use Gzhegow\VarDumper\Exceptions\Runtime\ShutdownException;
 use Gzhegow\VarDumper\Exceptions\Logic\InvalidArgumentException;
-use Gzhegow\VarDumper\Exceptions\Runtime\UnexpectedValueException;
 
 
 /**
@@ -372,14 +372,14 @@ class VarDumper
                 throw new \InvalidArgumentException('Each caster should be callable');
             }
 
-            $list[ $type ] = function () use ($caster) {
-                if (! is_bool($bool = $this->funcBind($caster)())) {
-                    throw new UnexpectedValueException(
-                        [ 'Caster should return boolean: %s', $bool ]
-                    );
-                }
+            $list[ $type ] = function ($object, $array, Stub $stub, $isNested, $filter) use ($caster) {
+                $func = $this->funcBind($caster);
 
-                return $bool;
+                $result = $func($object, $array, $stub, $isNested, $filter)
+                    ? $array
+                    : null;
+
+                return $result;
             };
         }
 
